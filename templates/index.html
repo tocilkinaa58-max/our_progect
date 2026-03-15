@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои задачи</title>
+    <link rel="stylesheet" href="./static/style.CSS">
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Мои задачи</h1>
+
+        <div class="add-task">
+            <input
+                type="text"
+                id="taskInput"
+                placeholder="Что нужно сделать?"
+                maxlength="100"
+                autocomplete="off"
+            >
+            <button id="addBtn">Добавить</button>
+        </div>
+
+        <div class="task-stats">
+            <span id="totalTasks">Всего: 0</span>
+            <span id="completedTasks">Выполнено: 0</span>
+        </div>
+
+        <ul class="task-list" id="taskList">
+            <!-- Задачи будут добавляться сюда -->
+        </ul>
+
+        <div class="clear-completed">
+            <button id="clearCompletedBtn">🗑️ Очистить выполненные</button>
+        </div>
+    </div>
+
+    <script>
+        // Загружаем задачи из localStorage или создаем пустой массив
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        // DOM элементы
+        const taskList = document.getElementById('taskList');
+        const taskInput = document.getElementById('taskInput');
+        const addBtn = document.getElementById('addBtn');
+        const totalTasksSpan = document.getElementById('totalTasks');
+        const completedTasksSpan = document.getElementById('completedTasks');
+        const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+
+        // Функция для сохранения задач в localStorage
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            updateStats();
+        }
+
+        // Функция для обновления статистики
+        function updateStats() {
+            const total = tasks.length;
+            const completed = tasks.filter(task => task.completed).length;
+            totalTasksSpan.textContent = `Всего: ${total}`;
+            completedTasksSpan.textContent = `Выполнено: ${completed}`;
+        }
+
+        // Функция для отображения задач
+        function renderTasks() {
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<div class="empty-message">✨ У вас пока нет задач. Добавьте первую!</div>';
+                updateStats();
+                return;
+            }
+
+            let html = '';
+            tasks.forEach((task, index) => {
+                html += `
+                    <li class="task-item ${task.completed ? 'completed' : ''}" data-index="${index}">
+                        <input
+                            type="checkbox"
+                            class="task-checkbox"
+                            ${task.completed ? 'checked' : ''}
+                            onchange="toggleTask(${index})"
+                        >
+                        <span class="task-text">${escapeHtml(task.text)}</span>
+                        <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
+                    </li>
+                `;
+            });
+            taskList.innerHTML = html;
+            updateStats();
+        }
+
+        // Функция для экранирования HTML-спецсимволов (защита от XSS)
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Функция для добавления новой задачи
+        function addTask() {
+            const text = taskInput.value.trim();
+
+            if (text === '') {
+                alert('Пожалуйста, введите текст задачи');
+                return;
+            }
+
+            if (text.length > 100) {
+                alert('Текст задачи не должен превышать 100 символов');
+                return;
+            }
+
+            const newTask = {
+                text: text,
+                completed: false
+            };
+
+            tasks.push(newTask);
+            saveTasks();
+            renderTasks();
+
+            taskInput.value = '';
+            taskInput.focus();
+        }
+
+        // Функция для переключения статуса задачи
+        window.toggleTask = function(index) {
+            tasks[index].completed = !tasks[index].completed;
+            saveTasks();
+            renderTasks();
+        };
+
+        // Функция для удаления задачи
+        window.deleteTask = function(index) {
+            if (confirm('Удалить задачу?')) {
+                tasks.splice(index, 1);
+                saveTasks();
+                renderTasks();
+            }
+        };
+
+        // Функция для очистки выполненных задач
+        function clearCompleted() {
+            const completedCount = tasks.filter(task => task.completed).length;
+
+            if (completedCount === 0) {
+                alert('Нет выполненных задач для очистки');
+                return;
+            }
+
+            if (confirm(`Очистить ${completedCount} выполненных ${getWordForm(completedCount)}?`)) {
+                tasks = tasks.filter(task => !task.completed);
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        // Вспомогательная функция для склонения слова "задача"
+        function getWordForm(count) {
+            if (count % 10 === 1 && count % 100 !== 11) return 'задачу';
+            if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'задачи';
+            return 'задач';
+        }
+
+        // Обработчики событий
+        addBtn.addEventListener('click', addTask);
+
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addTask();
+            }
+        });
+
+        clearCompletedBtn.addEventListener('click', clearCompleted);
+
+        // Инициализация
+        renderTasks();
+
+        // Добавляем несколько примеров задач при первом запуске
+        if (tasks.length === 0) {
+            tasks = [
+                { text: 'Купить продукты', completed: false },
+                { text: 'Сделать зарядку', completed: true },
+                { text: 'Почитать книгу', completed: false }
+            ];
+            saveTasks();
+            renderTasks();
+        }
+    </script>
+</body>
+</html>
